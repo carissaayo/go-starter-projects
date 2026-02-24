@@ -22,8 +22,8 @@ func printCommandEvents(analyticsChannel <-chan *slacker.CommandEvent) {
 }
 
 func main() {
-	os.Setenv("SLACK_BOT_TOKEN", "xoxb-2348941406391-10569000417094-epxA2uUzV4gLDlqwflFe0m7x")
-	os.Setenv("SLACK_APP_TOKEN", "xapp-1-A0AHM5EKH3J-10564516852515-5b6dfc9aee4f6aa52ac9e01d91dda680366816ccf9d7aefc5e45a10c9cb611af")
+	os.Setenv("SLACK_BOT_TOKEN", "")
+	os.Setenv("SLACK_APP_TOKEN", "")
 
 	bot := slacker.NewClient(os.Getenv("SLACK_BOT_TOKEN"), os.Getenv("SLACK_APP_TOKEN"))
 
