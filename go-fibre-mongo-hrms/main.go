@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -87,7 +88,32 @@ func main() {
 		return c.JSON(employees)
 	})
 
-	app.Post("/employee")
+	app.Post("/employee", func(c *fiber.Ctx) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		collection := mg.Db.Collection("employees")
+
+		var employee Employee
+
+		if err := c.BodyParser(&employee); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		employee.ID = primitive.NewObjectID().Hex()
+
+		result, err := collection.InsertOne(ctx, employee)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.Status(201).JSON(result)
+
+	})
 	app.Put("/employee/:id")
 	app.Delete("/employee/:id")
 }
