@@ -114,6 +114,98 @@ func main() {
 		return c.Status(201).JSON(result)
 
 	})
-	app.Put("/employee/:id")
-	app.Delete("/employee/:id")
+
+	app.Put("/employee/:id", func(c *fiber.Ctx) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		collection := mg.Db.Collection("employees")
+
+		idParam := c.Params("id")
+
+		employeeID, err := primitive.ObjectIDFromHex(idParam)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"error": "Invalid employee ID",
+			})
+		}
+
+		var employee Employee
+
+		if err := c.BodyParser(&employee); err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		filter := bson.M{"_id": employeeID}
+
+		update := bson.M{
+			"$set": bson.M{
+				"name":   employee.Name,
+				"age":    employee.Age,
+				"salary": employee.Salary,
+			},
+		}
+
+		opts := options.FindOneAndUpdate().
+			SetReturnDocument(options.After)
+
+		var updatedEmployee Employee
+
+		err = collection.FindOneAndUpdate(ctx, filter, update, opts).
+			Decode(&updatedEmployee)
+
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return c.Status(404).JSON(fiber.Map{
+					"error": "Employee not found",
+				})
+			}
+
+			return c.Status(500).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		return c.JSON(updatedEmployee)
+	})
+
+	app.Delete("/employee/:id", func(c *fiber.Ctx) error {
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		collection := mg.Db.Collection("employees")
+
+		idParam := c.Params("id")
+
+		employeeID, err := primitive.ObjectIDFromHex(idParam)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"error": "Invalid employee ID",
+			})
+		}
+
+		filter := bson.M{"_id": employeeID}
+
+		result, err := collection.DeleteOne(ctx, filter)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		if result.DeletedCount == 0 {
+			return c.Status(404).JSON(fiber.Map{
+				"error": "Employee not found",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Employee deleted successfully",
+		})
+	})
+
+	log.Fatal(app.Listen(":3000"))
 }
